@@ -1,0 +1,88 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# 1 & 2. Load and Clean Data
+try:
+    df = pd.read_csv("students.csv")
+    
+    # Cleaning validation logic
+    valid_rows = []
+    for idx, row in df.iterrows():
+        try:
+            # Check for non-numeric marks
+            marks = float(row['Marks'])
+            # Check if attended exceeds held
+            if int(row['Classes_Attended']) > int(row['Classes_Held']):
+                print(f"Row {idx+1} skipped: attended cannot exceed held.")
+                continue
+            valid_rows.append(row)
+        except ValueError:
+            print(f"Row {idx+1} skipped: invalid Marks '{row['Marks']}'")
+            
+    if not valid_rows:
+        print("No valid data to analyse.")
+        exit()
+        
+    df = pd.DataFrame(valid_rows)
+    df['Marks'] = df['Marks'].astype(float)
+    df['Classes_Held'] = df['Classes_Held'].astype(int)
+    df['Classes_Attended'] = df['Classes_Attended'].astype(int)
+
+except FileNotFoundError:
+    print("Error: students.csv file not found.")
+    exit()
+
+# 3. Calculate Attendance Percentage using Pandas columns
+df['Attendance_Pct'] = (df['Classes_Attended'] / df['Classes_Held']) * 100
+
+# Function to determine text output based on criteria
+def get_status(row):
+    if row['Attendance_Pct'] < 75: return "At Risk (attendance below 75%)"
+    if row['Marks'] < 40: return "At Risk (marks below 40%)"
+    return "OK"
+
+# Menu-driven program
+print("\n=== Menu ===\n1. Normal Report\n2. Summary and Charts")
+choice = input("Select Option (1 or 2): ").strip()
+
+if choice == '1':
+    # Test Case 1, 2, 3 Output format
+    for _, row in df.iterrows():
+        status = get_status(row)
+        print(f"{row['Name']}: {row['Attendance_Pct']:.2f}% | Marks {int(row['Marks'])} | {status}")
+
+elif choice == '2':
+    # 4. Use boolean filtering to find At Risk and calculate averages
+    avg_att = df['Attendance_Pct'].mean()
+    avg_marks = df['Marks'].mean()
+    
+    # Filter At Risk students using attendance < 75 or marks < 40
+    at_risk = df[(df['Attendance_Pct'] < 75) | (df['Marks'] < 40)]
+    at_risk_names = ", ".join(at_risk['Name'].tolist())
+    
+    print(f"\nAverage attendance: {avg_att:.2f}% | Average marks: {avg_marks:.2f}")
+    print(f"At Risk students: {len(at_risk)} ({at_risk_names if at_risk_names else 'None'})")
+    print("Bar chart and scatter chart 'Attendance vs Marks' displayed.")
+    
+    # 5. Plot at least two Matplotlib charts (bar and scatter)
+    plt.figure(figsize=(10, 4))
+    
+    # Bar Chart
+    plt.subplot(1, 2, 1)
+    plt.bar(df['Name'], df['Attendance_Pct'], color='skyblue')
+    plt.axhline(75, color='red', linestyle='--', label='75% Limit')
+    plt.title('Student Attendance')
+    plt.ylabel('%')
+    plt.legend()
+    
+    # Scatter Chart
+    plt.subplot(1, 2, 2)
+    plt.scatter(df['Attendance_Pct'], df['Marks'], color='purple', s=100)
+    plt.title('Attendance vs Marks')
+    plt.xlabel('Attendance %')
+    plt.ylabel('Marks')
+    
+    plt.tight_layout()
+    plt.show()
+else:
+    print("Invalid Choice.")
